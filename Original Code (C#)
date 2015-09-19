@@ -1,0 +1,1227 @@
+//Robert Fratila
+//December 8, 2012
+//Culminating_fratilar. This is my video game slither that plays like the classical game Snake. The game will progressively get harder through the uses of obstacles and increases in speed.
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Windows.Forms;
+using System.Media;
+
+
+namespace WindowsFormsApplication1
+{
+    public partial class Form1 : Form
+    {
+        //Initializes movement variables
+        bool moveUp;
+        bool moveDown;
+        bool moveRight;
+        bool moveLeft;
+
+        bool moveUp2;
+        bool moveDown2;
+        bool moveRight2;
+        bool moveLeft2;
+
+        bool gameRun;
+        bool codeRan;
+        bool codeRan2;
+        bool speedUp;
+        bool speedDown;
+        bool multiplayer;
+
+        double timeSeconds;
+        double timeMinute;
+        int speed;//Speed of snake
+        int score;//Score of player
+        int bodyPart;//Takes into account the amount of body parts that there are 
+        int bodyPart2;
+        int playedMoreThanOnce;
+
+        Label[] obstacle;//obstacle array
+        Label[] snake1;//snake body array
+        Label[] snake2;//Second snake body array for multiplayer
+        Label[] player;//player name array
+        Label[] playerScore;//player score array
+        Label[] leaderboard;//player rank array
+
+        Random foodItem;//random food placement
+
+        SoundPlayer speedSound = new SoundPlayer(Resource1.speed);
+
+        SoundPlayer crash = new SoundPlayer(Resource1.Sad);
+
+        SoundPlayer ateFood = new SoundPlayer(Resource1.Bite);
+
+        public Form1()
+        {
+            InitializeComponent();
+
+            foodItem = new Random();
+
+            obstacle = new Label[13];
+            obstacle[0] = obstacle1;
+            obstacle[1] = obstacle2;
+            obstacle[2] = obstacle3;
+            obstacle[3] = obstacle4;
+            obstacle[4] = obstacle5;
+            obstacle[5] = obstacle6;
+            obstacle[6] = obstacle7;
+            obstacle[7] = obstacle8;
+            obstacle[8] = obstacle9;
+            obstacle[9] = obstacle10;
+            obstacle[10] = obstacle11;
+            obstacle[11] = obstacle12;
+            obstacle[12] = obstacle13;
+
+            player = new Label[6];
+            player[0] = lblPlayer1;
+            player[1] = lblPlayer2;
+            player[2] = lblPlayer3;
+            player[3] = lblPlayer4;
+            player[4] = lblPlayer5;
+            player[5] = lblPlayer6;
+
+            playerScore = new Label[6];
+            playerScore[0] = lblScore1;
+            playerScore[1] = lblScore2;
+            playerScore[2] = lblScore3;
+            playerScore[3] = lblScore4;
+            playerScore[4] = lblScore5;
+            playerScore[5] = lblScore6;
+
+            leaderboard = new Label[6];
+            leaderboard[0] = lblFirstPlace;
+            leaderboard[1] = lblSecondPlace;
+            leaderboard[2] = lblThirdPlace;
+            leaderboard[3] = lblFourthPlace;
+            leaderboard[4] = lblFifthPlace;
+            leaderboard[5] = lblSixthPlace;
+
+            score = 0;
+            bodyPart = 2;
+            gameRun = false;
+            codeRan = true;
+            codeRan2 = true;
+            moveUp = false;
+            moveDown = false;
+            moveRight = false;//When game runs, the snake moves by default
+            moveLeft = false;
+            food.Visible = false;
+            drawSnake1();
+            drawSnake2();
+
+        }
+
+        //This draws the snake on the form
+        public void drawSnake1()
+        {
+            snake1 = new Label[100];//Total amount of body parts that can be obtained
+
+            for (int i = 0; i < snake1.Length; i++)
+            {
+                snake1[i] = new Label();
+
+                if (i == 0)
+                {
+                    snake1[0].Left = 200;
+                }
+                else
+                {
+                    snake1[i].Left = snake1[i - 1].Left - 10;
+                    snake1[i].Top = 20;
+                }
+
+                snake1[i].Top = 200;
+                snake1[i].Width = 10;
+                snake1[i].Height = 10;
+                snake1[i].Visible = false;
+                this.Controls.Add(snake1[i]);
+                snake1[i].BackColor = Color.Blue;
+            }
+        }
+
+        public void drawSnake2()
+        {
+            snake2 = new Label[100];//Total amount of body parts that can be obtained
+
+            for (int i = 0; i < snake2.Length; i++)
+            {
+                snake2[i] = new Label();
+
+                if (i == 0)
+                {
+                    snake2[0].Left = 100;
+                }
+                else
+                {
+                    snake2[i].Left = snake2[i - 1].Left - 10;
+                    snake2[i].Top = 20;
+                }
+
+                snake2[i].Top = 100;
+                snake2[i].Width = 10;
+                snake2[i].Height = 10;
+                snake2[i].Visible = false;
+                this.Controls.Add(snake2[i]);
+                snake2[i].BackColor = Color.Red;
+            }
+        }
+
+        //This randomly places one food item around the form
+        public void drawFood()
+        {
+            bool foundAGoodSpot = false;
+            while (foundAGoodSpot == false)
+            {
+                foundAGoodSpot = true;
+                food.Left = foodItem.Next(1, 30) * 10;
+                food.Top = foodItem.Next(2, 33) * 10;
+                food.Visible = true;
+
+                //does this location for the food itersect snake1?
+                if (multiplayer == true)
+                {
+
+                    for (int i = 0; i < snake2.Length; i++)
+                    {
+                        if (food.Bounds.IntersectsWith(snake2[i].Bounds))
+                        {
+                            if (snake2[i].Visible == true)
+                            {
+                                foundAGoodSpot = false;
+                            }
+                        }
+                    }
+                }
+
+                //does this location for the food itersect snake1?
+                for (int i = 0; i < snake1.Length; i++)
+                {
+                    if (food.Bounds.IntersectsWith(snake1[i].Bounds))
+                    {
+                        if (snake1[i].Visible == true)
+                        {
+                            foundAGoodSpot = false;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        public void collisionDetection()
+        {
+            //If snake collides with food item, the body increases in length and the total score gets increased by 1
+            if (snake1[0].Bounds.IntersectsWith(food.Bounds))
+            {
+                ateFood.Play();
+                food.Visible = false;
+                drawFood();
+                bodyPart = bodyPart + 1;//Calls the slot in the array by one                    
+                snake1[bodyPart].Visible = true;//Calls the slot in the array to become visible
+                if (multiplayer == false)
+                {
+                    score = score + 1;
+                    lblScore.Text = "Score: " + score;
+                    progression();
+                    powerSpawnSystem();
+                }
+            }
+            //If snake collides with either border, the game ends
+            else if (snake1[0].Bounds.IntersectsWith(fieldRight.Bounds) || snake1[0].Bounds.IntersectsWith(fieldLeft.Bounds) || snake1[0].Bounds.IntersectsWith(fieldTop.Bounds) || snake1[0].Bounds.IntersectsWith(fieldBottom.Bounds))
+            {
+                restart();
+                crash.Play();
+                if (multiplayer == true)
+                {
+                    player2Wins();
+                }
+            }
+            //If snake collides with the power up
+            else if (snake1[0].Bounds.IntersectsWith(powerSpeedUp.Bounds))
+            {
+                speedSound.PlayLooping();
+                powerSpeedUp.Visible = false;
+                speedUp = true;
+                powerSpeedUp.Left = 117;
+                powerSpeedUp.Top = -13;
+
+            }
+
+            else if (snake1[0].Bounds.IntersectsWith(powerSpeedDown.Bounds))
+            {
+                powerSpeedDown.Visible = false;
+                speedDown = true;
+                powerSpeedDown.Left = 133;
+                powerSpeedDown.Top = -13;
+            }
+
+            else if (multiplayer == true)
+            {
+                for (int i = 0; i < snake2.Length; i++)
+                {
+
+                    if (snake2[i].Visible == true)
+                    {
+                        if (snake1[0].Bounds.IntersectsWith(snake2[i].Bounds))
+                        {
+                            crash.Play();
+                            player2Wins();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < obstacle.Length; i++)
+                {
+                    if (obstacle[i].Visible == true)
+                    {
+                        if (snake1[0].Bounds.IntersectsWith(obstacle[i].Bounds))
+                        {
+                            crash.Play();
+                            restart();
+                        }
+                    }
+                }
+
+                for (int i = 2; i < snake1.Length; i++)
+                {
+                    if (snake1[i].Visible == true)
+                    {
+                        //If snake collides with itself, the game ends
+                        if (snake1[0].Bounds.IntersectsWith(snake1[i].Bounds))
+                        {
+                            crash.Play();
+                            restart();
+                            if (multiplayer == true)
+                            {
+                                player2Wins();
+                            }
+                        }
+                    }
+                }
+
+
+                //If food or power up spawns on a obstacle, it will spawn elsewhere.
+
+                for (int i = 0; i < obstacle.Length; i++)
+                {
+                    if (food.Bounds.IntersectsWith(obstacle[i].Bounds))
+                    {
+                        food.Left = foodItem.Next(1, 30) * 10;
+                    }
+
+                    else if (powerSpeedUp.Bounds.IntersectsWith(obstacle[i].Bounds))
+                    {
+                        powerSpeedUp.Left = foodItem.Next(1, 30) * 10;
+                    }
+
+                    else if (powerSpeedDown.Bounds.IntersectsWith(obstacle[i].Bounds))
+                    {
+                        powerSpeedDown.Left = foodItem.Next(1, 30) * 10;
+                    }
+                }
+
+            }
+
+            if (speedUp == true)
+            {
+                timer1.Interval = 60;
+                lblPowerDisplay.Text = "BOOST!!!";
+                lblPowerDisplay.BackColor = Color.DarkOrange;
+                lblPowerDisplay.Width = lblPowerDisplay.Width - 2;
+                speedChange();
+            }
+
+            else if (speedDown == true)
+            {
+                timer1.Interval = 80;
+                lblPowerDisplay.Text = "SLOW DOWN!!!";
+                lblPowerDisplay.BackColor = Color.MediumOrchid;
+                lblPowerDisplay.Width = lblPowerDisplay.Width - 5;
+                speedChange();
+            }
+        }
+
+        public void speedChange()
+        {
+            flash();
+            lblCurrentHighscore.Visible = false;
+            if (lblPowerDisplay.Width == 0)
+            {
+                speedUp = false;
+                speedDown = false;
+                lblCurrentHighscore.Visible = true;
+                lblPowerDisplay.Width = 279;
+            }
+        }
+        public void clock()
+        {
+            lblTime.Visible = true;
+            timeSeconds = timeSeconds + 0.09;
+            timeMinute = timeMinute + 0.09;
+            lblScore.Text = "Time: ";
+            lblTime.Text = timeSeconds.ToString("N0") + " Seconds";
+
+            if (timeMinute > 59.9)
+            {
+                lblTime.Text = "1:" + (timeSeconds - 59).ToString("N0");
+            }
+
+            else if (timeMinute > 119.9)
+            {
+                lblTime.Text = "2:" + (timeSeconds - 59).ToString("N0");
+            }
+        }
+        public void flash()
+        {
+            if (lblPowerDisplay.Visible == true)
+            {
+                lblPowerDisplay.Visible = false;
+            }
+            else
+            {
+                lblPowerDisplay.Visible = true;
+            }
+        }
+
+        public void playerWins()
+        {
+            sendToBack();
+            gameRun = false;
+            lblWinningPlayer.Visible = true;
+            lblBack.Visible = true;
+            nameInsertBackground.Visible = true;
+            nameInsertBackground.BackColor = Color.Red;
+            lblWinningPlayer.BringToFront();
+            timeSeconds = 0;
+            timeMinute = 0;
+        }
+        public void player2Wins()
+        {
+            playerWins();
+            lblWinningPlayer.Text = "Red Player Wins! The Game Lasted For " + lblTime.Text;
+            nameInsertBackground.BackColor = Color.Red;
+        }
+
+        public void player1Wins()
+        {
+            playerWins();
+            lblWinningPlayer.Text = "Blue Player Wins! The Game Lasted For " + lblTime.Text;
+            nameInsertBackground.BackColor = Color.Blue;
+        }
+
+        public void player2Collision()
+        {
+            if (multiplayer == true)
+            {
+                if (snake2[0].Bounds.IntersectsWith(food.Bounds))
+                {
+                    ateFood.Play();
+                    food.Visible = false;
+                    drawFood();
+                    bodyPart2 = bodyPart2 + 1;//Calls the slot in the array by one                    
+                    snake2[bodyPart2].Visible = true;//Calls the slot in the array to become visible    
+                }
+
+                else if (snake2[0].Bounds.IntersectsWith(fieldRight.Bounds) || snake2[0].Bounds.IntersectsWith(fieldLeft.Bounds) || snake2[0].Bounds.IntersectsWith(fieldTop.Bounds) || snake2[0].Bounds.IntersectsWith(fieldBottom.Bounds))
+                {
+                    player1Wins();
+                    crash.Play();
+                }
+
+                else
+                {
+                    for (int ii = 2; ii < snake1.Length; ii++)
+                    {
+                        if (snake2[ii].Visible == true)
+                        {
+                            //If snake collides with itself, the game ends
+                            if (snake2[0].Bounds.IntersectsWith(snake2[ii].Bounds))
+                            {
+                                player1Wins();
+                                crash.Play();
+                            }
+                        }
+                    }
+
+                    for (int i = 0; i < snake1.Length; i++)
+                    {
+                        if (snake1[i].Visible == true)
+                        {
+                            if (snake2[0].Bounds.IntersectsWith(snake1[i].Bounds))
+                            {
+                                player1Wins();
+                                crash.Play();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public void snakeRun()
+        {
+            if (gameRun == true)
+            {
+                fieldTop.BringToFront();
+                if (multiplayer == false)
+                {
+                    score = 0;
+                    lblScore.Text = "Score: " + score;
+                    powerSpeedUp.Left = 117;
+                    powerSpeedUp.Top = -13;
+                    powerSpeedDown.Left = 117;
+                    powerSpeedDown.Top = -13;
+                    bodyPart = 2;
+                    lblPowerDisplay.Width = 279;
+                }
+
+                snake1[0].Left = 200;
+                snake1[0].Top = 200;
+
+                moveUp = false;
+                moveDown = false;
+                moveRight = true;
+                moveLeft = false;
+
+                moveUp2 = false;
+                moveDown2 = false;
+                moveRight2 = true;
+                moveLeft2 = false;
+
+
+                for (int i = 0; i < snake1.Length; i++)
+                {
+                    snake1[i].Visible = false;
+                }
+
+                snake1[0].Visible = true;
+                snake1[1].Visible = true;
+                snake1[2].Visible = true;
+
+                if (multiplayer == true)
+                {
+                    bodyPart = 5;
+                    bodyPart2 = 5;
+
+                    for (int i = 0; i < 6; i++)
+                    {
+                        snake2[i].Visible = true;
+                    }
+
+                    snake1[3].Visible = true;
+                    snake1[4].Visible = true;
+                    snake1[5].Visible = true;
+                }
+            }
+        }
+        //This repositions arrays and starts a new game
+        public void restart()
+        {
+            scoreDisplay();
+            gameRun = false;
+        }
+
+        //The up, down, left, and right keys get activated but only one at a time. The movement cannot be reversed if going in a direction
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (codeRan == true)
+            {
+                //Initializes the up key to work, snake can't go down 
+                if (e.KeyData == Keys.Up && moveDown == false)
+                {
+                    moveUp = true;
+                    moveDown = false;
+                    moveRight = false;
+                    moveLeft = false;
+                    codeRan = false;
+                }
+
+            //Initializes the down key to work, snake can't go up
+                else if (e.KeyData == Keys.Down && moveUp == false)
+                {
+                    moveUp = false;
+                    moveDown = true;
+                    moveRight = false;
+                    moveLeft = false;
+                    codeRan = false;
+                }
+
+                //Initializes the right key to work, snake can't go left
+                else if (e.KeyData == Keys.Right && moveLeft == false)
+                {
+                    moveUp = false;
+                    moveDown = false;
+                    moveRight = true;
+                    moveLeft = false;
+                    codeRan = false;
+                }
+
+                //Initializes the left key to work, snake can't go right
+                else if (e.KeyData == Keys.Left && moveRight == false)
+                {
+                    moveUp = false;
+                    moveDown = false;
+                    moveRight = false;
+                    moveLeft = true;
+                    codeRan = false;
+                }
+            }
+
+            if (codeRan2 == true)
+            {
+                if (multiplayer == true)
+                {
+                    if (e.KeyData == Keys.W && moveDown2 == false)
+                    {
+                        moveUp2 = true;
+                        moveDown2 = false;
+                        moveRight2 = false;
+                        moveLeft2 = false;
+                        codeRan2 = false;
+                    }
+
+                    else if (e.KeyData == Keys.S && moveUp2 == false)
+                    {
+                        moveUp2 = false;
+                        moveDown2 = true;
+                        moveRight2 = false;
+                        moveLeft2 = false;
+                        codeRan2 = false;
+                    }
+
+                    else if (e.KeyData == Keys.D && moveLeft2 == false)
+                    {
+                        moveUp2 = false;
+                        moveDown2 = false;
+                        moveRight2 = true;
+                        moveLeft2 = false;
+                        codeRan2 = false;
+                    }
+
+                    else if (e.KeyData == Keys.A && moveRight2 == false)
+                    {
+                        moveUp2 = false;
+                        moveDown2 = false;
+                        moveRight2 = false;
+                        moveLeft2 = true;
+                        codeRan2 = false;
+                    }
+                }
+            }
+
+            if (txtName.Visible == true)
+            {
+                if (e.KeyCode.ToString() == "Return")
+                {
+                    ok();
+                }
+            }
+        }
+
+        //This moves the snakes head and body follows it 
+        public void timer1_Tick(object sender, EventArgs e)
+        {
+            if (gameRun == true)
+            {
+                movement();
+                collisionDetection();
+                player2Collision();
+                codeRan = true;
+                if (multiplayer == true)
+                {
+                    clock();
+                    codeRan2 = true;
+                }
+                else
+                {
+                    progression();
+                }
+            }
+        }
+
+        public void movement()
+        {
+            speed = 10;
+            if (multiplayer == true)
+            {
+
+                if (moveUp2 == true)
+                {
+                    up2();
+                }
+                else if (moveDown2 == true)
+                {
+                    down2();
+                }
+                else if (moveRight2 == true)
+                {
+                    right2();
+                }
+                else if (moveLeft2 == true)
+                {
+                    left2();
+                }
+            }
+
+            //calls the method dealing with the upwards movement of the snake
+            if (moveUp == true)
+            {
+                up1();
+            }
+
+            //calls the method dealing with the downwards movement of the snake
+            else if (moveDown == true)
+            {
+                down1();
+            }
+
+            //calls the method dealing with the sideways(right) movement of the snake
+            else if (moveRight == true)
+            {
+                right1();
+            }
+
+            //calls the method dealing with the sideways(left) movement of the snake
+            else if (moveLeft == true)
+            {
+                left1();
+            }
+        }
+
+        //Moves snake head up
+        public void up1()
+        {
+            snakeBody1();
+            snake1[0].Top = snake1[0].Top - speed;
+        }
+
+        public void up2()
+        {
+            snakeBody2();
+            snake2[0].Top = snake2[0].Top - speed;
+        }
+
+        //Moves snake head down
+        public void down1()
+        {
+            snakeBody1();
+            snake1[0].Top = snake1[0].Top + speed;
+        }
+
+        public void down2()
+        {
+            snakeBody2();
+            snake2[0].Top = snake2[0].Top + speed;
+        }
+
+        //Moves snake head right
+        public void right1()
+        {
+            snakeBody1();
+            snake1[0].Left = snake1[0].Left + speed;
+        }
+
+        public void right2()
+        {
+            snakeBody2();
+            snake2[0].Left = snake2[0].Left + speed;
+        }
+
+        //Moves snake head left
+        public void left1()
+        {
+            snakeBody1();
+            snake1[0].Left = snake1[0].Left - speed;
+        }
+
+        public void left2()
+        {
+            snakeBody2();
+            snake2[0].Left = snake2[0].Left - speed;
+        }
+
+        //All body parts replace the position of the body part in front of them. 
+        public void snakeBody1()
+        {
+            //The labels X and Y values are constantly changing to the label previous to it
+            for (int i = snake1.Length - 1; i > 0; i--)
+            {
+                snake1[i].Top = snake1[i - 1].Top;
+                snake1[i].Left = snake1[i - 1].Left;
+            }
+        }
+
+        public void snakeBody2()
+        {
+            for (int ii = snake2.Length - 1; ii > 0; ii--)
+            {
+                snake2[ii].Top = snake2[ii - 1].Top;
+                snake2[ii].Left = snake2[ii - 1].Left;
+            }
+        }
+
+        private void lblStartPlayer1_Click(object sender, EventArgs e)
+        {
+            multiplayer = false;
+            gameRun = true;
+            menuDisplayDisappear();
+            lblScore.Visible = true;
+            fieldTop.Visible = true;
+            food.Visible = true;
+            lblTime.SendToBack();
+            lblCurrentHighscore.Visible = true;
+            lblCurrentHighscore.Text = "High Score: " + lblScore1.Text;
+            snake2Disappear();
+            snakeRun();
+        }
+
+
+        private void lblStartPlayer2_Click(object sender, EventArgs e)
+        {
+            multiplayer = true;
+            playedMoreThanOnce = playedMoreThanOnce + 1;
+            fieldTop.Visible = true;
+            gameRun = true;
+            lblScore.Visible = true;
+            menuDisplayDisappear();
+            food.Visible = true;
+            timer1.Interval = 90;
+            lblTime.BringToFront();
+
+            for (int i = 0; i < snake2.Length; i++)
+            {
+                snake2[i].Visible = false;
+            }
+            if (playedMoreThanOnce == 1)
+            {
+                drawSnake2();
+            }
+            else if (playedMoreThanOnce > 1)
+            {
+                snake2[0].Left = 100;
+                snake2[0].Top = 100;
+            }
+            snakeRun();
+        }
+
+        public void snake2Disappear()
+        {
+            for (int i = 0; i < snake2.Length; i++)
+            {
+                snake2[i].Visible = false;
+            }
+        }
+        public void powerUpSpawn()
+        {
+            powerSpeedUp.Visible = true;
+            powerSpeedUp.Left = foodItem.Next(1, 30) * 10;
+            powerSpeedUp.Top = foodItem.Next(2, 33) * 10;
+        }
+
+        public void powerDownSpawn()
+        {
+            powerSpeedDown.Visible = true;
+            powerSpeedDown.Left = foodItem.Next(1, 30) * 10;
+            powerSpeedDown.Top = foodItem.Next(2, 33) * 10;
+        }
+
+        public void powerSpawnSystem()
+        {
+            if (score == 5)
+            {
+                powerUpSpawn();
+
+            }
+            else if (score == 6)
+            {
+                powerSpeedUp.Visible = false;
+                powerSpeedUp.Left = 117;
+                powerSpeedUp.Top = -13;
+            }
+            else if (score == 15)
+            {
+                powerUpSpawn();
+
+            }
+            else if (score == 16)
+            {
+                powerSpeedUp.Visible = false;
+                powerSpeedUp.Left = 117;
+                powerSpeedUp.Top = -13;
+            }
+            else if (score == 45)
+            {
+                powerDownSpawn();
+
+            }
+
+            else if (score == 46)
+            {
+                powerSpeedDown.Visible = false;
+                powerSpeedDown.Left = 133;
+                powerSpeedDown.Top = -13;
+            }
+            else if (score == 51)
+            {
+                powerDownSpawn();
+            }
+
+            else if (score == 52)
+            {
+                powerSpeedDown.Visible = false;
+                powerSpeedDown.Left = 133;
+                powerSpeedDown.Top = -13;
+            }
+        }
+        public void progression()
+        {
+            if (score == 10)
+            {
+                obstacle[0].Visible = true;
+            }
+
+            else if (score == 30)
+            {
+                obstacle[1].Visible = true;
+                obstacle[2].Visible = true;
+                obstacle[3].Visible = true;
+                obstacle[4].Visible = true;
+            }
+
+            else if (score == 50)
+            {
+                obstacle[5].Visible = true;
+                obstacle[6].Visible = true;
+                obstacle[7].Visible = true;
+                obstacle[8].Visible = true;
+                obstacle[9].Visible = true;
+                obstacle[10].Visible = true;
+                obstacle[11].Visible = true;
+                obstacle[12].Visible = true;
+            }
+
+            if (speedUp == false && speedDown == false)
+            {
+                if (score >= 0 && score < 10)
+                {
+                    timer1.Interval = 90;
+                }
+
+                else if (score < 20)
+                {
+                    timer1.Interval = 85;
+                }
+
+                else if (score < 30)
+                {
+                    timer1.Interval = 70;
+                }
+
+                else if (score < 40)
+                {
+                    timer1.Interval = 65;
+                }
+                else if (score < 50)
+                {
+                    timer1.Interval = 60;
+                }
+
+                else if (score < 60)
+                {
+                    timer1.Interval = 55;
+                }
+
+                else if (score < 70)
+                {
+                    timer1.Interval = 50;
+                }
+                else if (score < 80)
+                {
+                    timer1.Interval = 45;
+                }
+                else if (score < 90)
+                {
+                    timer1.Interval = 40;
+                }
+            }
+        }
+
+        public void menuDisplayDisappear()
+        {
+            picSnake.Visible = false;
+            lblHighScores.Visible = false;
+            lblInstructions.Visible = false;
+            lblStartPlayer1.Visible = false;
+            lblStartPlayer2.Visible = false;
+        }
+        private void lblInstructions_Click(object sender, EventArgs e)
+        {
+            menuDisplayDisappear();
+            lblNext.Visible = true;
+            lblBack.Visible = true;
+            picInstructions.Visible = true;
+        }
+
+        public void highScore()
+        {
+            food.Visible = false;
+            for (int i = 0; i < snake1.Length; i++)
+            {
+                snake1[i].Visible = false;
+            }
+
+            snake2Disappear();
+            lblScore.Visible = false;
+            fieldTop.Visible = false;
+            highscore.Visible = true;
+            menuDisplayDisappear();
+            lblBack.Visible = true;
+            lblPowerDisplay.Visible = false;
+
+            for (int i = 0; i < player.Length; i++)
+            {
+                player[i].Visible = true;
+            }
+            for (int i = 0; i < playerScore.Length; i++)
+            {
+                playerScore[i].Visible = true;
+            }
+            for (int i = 0; i < leaderboard.Length; i++)
+            {
+                leaderboard[i].Visible = true;
+            }
+        }
+
+        private void lblHighScores_Click(object sender, EventArgs e)
+        {
+            highScore();
+        }
+
+        private void lblBack_Click(object sender, EventArgs e)
+        {
+            fieldTop.SendToBack();
+            nameInsertBackground.Visible = false;
+            nameInsertBackground.BackColor = Color.OrangeRed;
+            highscore.Visible = false;
+            menuReappear();
+            lblBack.Visible = false;
+            lblNext.Visible = false;
+            picInstructions.Visible = false;
+            picInstructionMultiplayer.Visible = false;
+            lblWinningPlayer.Visible = false;
+
+            for (int i = 0; i < player.Length; i++)
+            {
+                player[i].Visible = false;
+            }
+            for (int i = 0; i < playerScore.Length; i++)
+            {
+                playerScore[i].Visible = false;
+            }
+            for (int i = 0; i < leaderboard.Length; i++)
+            {
+                leaderboard[i].Visible = false;
+            }
+
+            lblTime.Visible = false;
+
+        }
+
+        public void sendToBack()
+        {
+            powerSpeedUp.SendToBack();
+            powerSpeedDown.SendToBack();
+            food.SendToBack();
+            for (int i = 0; i < snake1.Length; i++)
+            {
+                snake1[i].SendToBack();
+            }
+
+            for (int i = 0; i < snake2.Length; i++)
+            {
+                snake2[i].SendToBack();
+            }
+        }
+        public void scoreDisplay()
+        {
+            if (multiplayer == false)
+            {
+                sendToBack();
+
+                for (int i = 0; i < obstacle.Length; i++)
+                {
+                    obstacle[i].SendToBack();
+                }
+
+
+                lblPowerDisplay.Visible = false;
+                txtName.Visible = true;
+                txtName.Focus();
+                lblOk.Visible = true;
+                lblNameEnter.Visible = true;
+                txtName.Text = "";
+                powerSpeedUp.Visible = false;
+                powerSpeedDown.Visible = false;
+                nameInsertBackground.Visible = true;
+                lblNameEnter.BringToFront();
+                txtName.BringToFront();
+                lblOk.BringToFront();
+                speedUp = false;
+                speedDown = false;
+            }
+        }
+
+        public void menuReappear()
+        {
+            picSnake.Visible = true;
+            lblStartPlayer1.Visible = true;
+            lblStartPlayer2.Visible = true;
+            lblInstructions.Visible = true;
+            lblHighScores.Visible = true;
+        }
+        private void ok()
+        {
+            lblNameEnter.Visible = false;
+            txtName.Visible = false;
+            lblOk.Visible = false;
+            nameInsertBackground.Visible = false;
+            lblCurrentHighscore.Visible = false;
+
+            for (int i = 0; i < obstacle.Length; i++)
+            {
+                obstacle[i].Visible = false;
+            }
+            menuReappear();
+            food.Visible = false;
+            highScore();
+
+            int mysterySlot = -1;
+
+            for (int i = 0; i < playerScore.Length; i++)
+            {
+                if (score > int.Parse(playerScore[i].Text))
+                {
+                    mysterySlot = i;
+                    break;
+                }
+            }
+
+            if (mysterySlot != -1)
+            {
+                for (int i = 5; i > mysterySlot; i--)
+                {
+                    playerScore[i].Text = playerScore[i - 1].Text;
+                    player[i].Text = player[i - 1].Text;
+                }
+                player[mysterySlot].Text = txtName.Text;
+                playerScore[mysterySlot].Text = "" + score;
+            }
+        }
+        private void lblOk_Click(object sender, EventArgs e)
+        {
+            ok();
+        }
+
+        private void lblHighScores_MouseEnter(object sender, EventArgs e)
+        {
+            lblHighScores.BackColor = Color.LightSkyBlue;
+        }
+
+        private void lblHighScores_MouseLeave(object sender, EventArgs e)
+        {
+            lblHighScores.BackColor = Color.SlateGray;
+        }
+
+        private void lblInstructions_MouseEnter(object sender, EventArgs e)
+        {
+            lblInstructions.BackColor = Color.GreenYellow;
+        }
+
+        private void lblInstructions_MouseLeave(object sender, EventArgs e)
+        {
+            lblInstructions.BackColor = Color.SlateGray;
+        }
+
+        private void lblStartPlayer1_MouseEnter(object sender, EventArgs e)
+        {
+            lblStartPlayer1.BackColor = Color.Blue;
+        }
+
+        private void lblStartPlayer1_MouseLeave(object sender, EventArgs e)
+        {
+            lblStartPlayer1.BackColor = Color.SlateGray;
+        }
+
+        private void lblStartPlayer2_MouseEnter(object sender, EventArgs e)
+        {
+            lblStartPlayer2.BackColor = Color.Crimson;
+        }
+
+        private void lblStartPlayer2_MouseLeave(object sender, EventArgs e)
+        {
+            lblStartPlayer2.BackColor = Color.SlateGray;
+        }
+
+        private void lblOk_MouseEnter(object sender, EventArgs e)
+        {
+            lblOk.BackColor = Color.Gold;
+        }
+
+        private void lblOk_MouseLeave(object sender, EventArgs e)
+        {
+            lblOk.BackColor = Color.SlateGray;
+        }
+
+        private void lblBack_MouseEnter(object sender, EventArgs e)
+        {
+            lblBack.BackColor = Color.Gold;
+        }
+
+        private void lblBack_MouseLeave(object sender, EventArgs e)
+        {
+            lblBack.BackColor = Color.SlateGray;
+        }
+
+        private void lblNext_Click(object sender, EventArgs e)
+        {
+            lblNext.Visible = false;
+            picInstructionMultiplayer.Visible = true;
+            food.SendToBack();
+            picInstructions.Visible = false;
+        }
+
+        private void lblNext_MouseEnter(object sender, EventArgs e)
+        {
+            lblNext.BackColor = Color.Gold;
+        }
+
+        private void lblNext_MouseLeave(object sender, EventArgs e)
+        {
+            lblNext.BackColor = Color.SlateGray;
+        }
+
+        private void food_Paint(object sender, PaintEventArgs e)
+        {
+            e.Graphics.FillEllipse(Brushes.Green, 0, 0, food.Width, food.Height);
+        }
+
+        private void powerSpeedUp_Paint(object sender, PaintEventArgs e)
+        {
+            e.Graphics.FillEllipse(Brushes.DarkOrange, 0, 0, food.Width, food.Height);
+        }
+
+        private void powerSpeedDown_Paint(object sender, PaintEventArgs e)
+        {
+            e.Graphics.FillEllipse(Brushes.Indigo, 0, 0, food.Width, food.Height);
+        }
+    }
+}
